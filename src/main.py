@@ -17,7 +17,7 @@ def load_mean_data(rawFilename, arrFilename, forceGenerate=False):
     stream = rawFile['stream_a']
     confs_list = []
 
-    tRegex = re.compile('t\\d+_') # regular expression to find t value
+    tRegex = re.compile(r't\d+_') # regular expression to find t value
     for conf in stream.values():
         lattices = []
         for item in conf.items():
@@ -32,13 +32,13 @@ def load_mean_data(rawFilename, arrFilename, forceGenerate=False):
             latticeComplex = np.empty(len(latticeFloat)//2, np.cdouble)
             latticeComplex.real = latticeFloat[0::2]
             latticeComplex.imag = latticeFloat[1::2]
-            # print(latticeComplex)
-            # print(item[0], t, np.array(lattice).shape)
+
             # add rolled array to the list
             lattices.append(np.roll(latticeComplex, -t))
 
-        # confs_list.append(np.mean(np.array(lattices), 0))
-        confs_list.append(np.array(lattices)[5])
+        confs_list.append(np.mean(np.array(lattices), 0))
+        # confs_list.append(np.array(lattices)[5])
+
     confs = np.array(confs_list)
 
     # save np array
@@ -55,6 +55,6 @@ confs = load_mean_data(rawFilename, arrFilename, True)
 # conf = confs[0][0::2]
 conf = confs[0]
 tau = np.arange(len(conf))
-plt.plot(tau, conf)
-plt.plot(tau, conf, 'x')
+plt.plot(tau, np.abs(conf))
+plt.plot(tau, np.abs(conf), 'x')
 plt.savefig('../plot/test.png')
