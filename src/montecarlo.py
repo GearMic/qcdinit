@@ -107,6 +107,7 @@ def bin_mean(obs: np.ndarray, size: int, axis: int = 0):
     """
     turn size values of obs into one value by calculating the mean.
     """
+    if size==1: return obs
 
     obs = obs.swapaxes(0, axis)
     n = len(obs)
@@ -160,11 +161,10 @@ def bin_error_plot(data, fig, ax, label=None, max_binsize=100, filename=None, dp
     Plot of error against bin size using fig and ax.
     If filename=None then the plot has to be saved manually.
     """
-    max_binsize = 100
     binsize, error = errors_of_binned(data, max_binsize)
 
-    ax.plot(binsize, error, label=label)
-    ax.set_xlim(left=0, right=max_binsize)
+    ax.plot(binsize, error, '.', label=label)
+    ax.set_xlim(left=1, right=max_binsize)
     ax.set_ylim(bottom=0)
     ax.set_xlabel("Bin Size")
     ax.set_ylabel("Naive Error")
@@ -212,7 +212,7 @@ def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
             exp_fn, xSample, ySample, initialGuess, yErrSample)
         aArr[i], bArr[i] = poptBoot
 
-    aErr = np.std(np.abs(aArr))
-    bErr = np.std(np.abs(bArr))
+    aErr = np.std(aArr)
+    bErr = np.std(bArr)
 
     return a, b, aErr, bErr

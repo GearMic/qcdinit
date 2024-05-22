@@ -3,6 +3,9 @@ import h5py
 import pathlib
 import re
 
+def prerr(value, err, text="prerr", unit=""):
+    print(text, value, "+-", err, unit)
+
 def load_mean_data(rawFilename, arrFilename, forceGenerate=False):
     # load saved np array and return if it exists
     arrPath = pathlib.Path(arrFilename)
