@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy.optimize as optimize
 
 
 def bin_normalized(data, n_bins, xlower, xupper):
@@ -139,7 +141,6 @@ def expectation_error_estimate(obs: np.ndarray, axis: int):
     error = np.sqrt(var) / np.sqrt(N)
     return error
 
-
 def errors_of_binned(obs: np.ndarray, max_size: int):
     """
     calculates errors of obs for increasing bin size.
@@ -154,3 +155,64 @@ def errors_of_binned(obs: np.ndarray, max_size: int):
 
     return np.array(binsize), np.array(error)
 
+def bin_error_plot(data, fig, ax, label=None, max_binsize=100, filename=None, dpi=300):
+    """
+    Plot of error against bin size using fig and ax.
+    If filename=None then the plot has to be saved manually.
+    """
+    max_binsize = 100
+    binsize, error = errors_of_binned(data, max_binsize)
+
+    ax.plot(binsize, error, label=label)
+    ax.set_xlim(left=0, right=max_binsize)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel("Bin Size")
+    ax.set_ylabel("Naive Error")
+    ax.set_title("Error against bin size")
+    ax.grid()
+    ax.legend()
+
+    if not (filename is None):
+        fig.savefig(filename, dpi=dpi)
+
+def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
+    """
+    exponential fit of the form f(x) = a * exp(-b * x).
+    returns a, b, a_err, b_err. Errors calculated using bootstrapping.
+    if yErr is None, yErr is initialized to an array of ones.
+    """
+
+    def exp_fn(x: float, a: float, b: float):
+        return a * np.exp(-b*x)
+
+    # prepare data arrays
+    dataLen = len(x)
+    if yErr is None:
+        yErr = np.ones(dataLen)
+    if sliceLen is None:
+        sliceLen = len(x)
+    x = x[:sliceLen]
+    y = y[:sliceLen]
+    yErr = yErr[:sliceLen]
+    iRange = range(dataLen)
+
+    # individual fit for parameter values
+    popt, pcov = optimize.curve_fit(exp_fn, x, y, initialGuess, yErr)
+    a, b = popt
+
+    # bootstrapping for parameter errors
+    aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
+    for i in range(nStraps):
+        sampleIndex = np.random.choice(iRange, dataLen)
+        xSample = x[sampleIndex]
+        ySample = y[sampleIndex]
+        yErrSample = yErr[sampleIndex]
+
+        poptBoot, _ = optimize.curve_fit(
+            exp_fn, xSample, ySample, initialGuess, yErrSample)
+        aArr[i], bArr[i] = poptBoot
+
+    aErr = np.std(np.abs(aArr))
+    bErr = np.std(np.abs(bArr))
+
+    return a, b, aErr, bErr
