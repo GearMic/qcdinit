@@ -40,8 +40,8 @@ a, b, aErr, bErr = exp_fit_bootstrap(
 prerr(a, aErr, 'a')
 prerr(b, bErr, 'b (pion mass)')
 
-hbarc = 1.054571 * 299702458 / 1.602176 * (1e-34*1e19*1e15)
-mIdeal = 0.069 * 139.57039 / hbarc
+hbarc = 1.054571 * 299702458 / 1.602176 * (1e-34*1e19*1e15*1e6)
+mIdeal = 0.06821 * 139.57039 / hbarc
 print('pion mass ideal: ', mIdeal)
 
 # add fit line to plot
