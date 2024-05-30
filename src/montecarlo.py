@@ -199,18 +199,29 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None)
     chisq = np.sum(infodict['fvec']**2)
 
     # bootstrapping for parameter errors
-    paramsArr = np.empty((nStraps, len(params)))
+    paramsArr = np.zeros((nStraps, len(params)))
+    indexArr = np.zeros((nStraps, dataLen))
+    paramsBootSum = 0
     for i in range(nStraps):
-        sampleIndex = np.random.choice(iRange, dataLen)
+        sampleIndex = np.random.choice(iRange, dataLen, replace=True)
+        indexArr[i] = sampleIndex
         xSample = x[sampleIndex]
         ySample = y[sampleIndex]
         yErrSample = yErr[sampleIndex]
 
         paramsBoot, _ = optimize.curve_fit(
             fit_fn, xSample, ySample, initialGuess, yErrSample)
-        paramsArr[i] = np.array(paramsBoot)
+        paramsBoot = np.array(paramsBoot)
+        paramsArr[i] = paramsBoot
+        paramsBootSum += paramsBoot
+        # if i==3: print(paramsArr[:5])
 
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
+    paramsBootMean = paramsBootSum / nStraps
 
-    # TODO: return bootstrap mean
-    return params, paramsErr, chisq
+    # debugging
+    if paramsErr[1] < 1e-4:
+        print(paramsErr)
+        print(indexArr)
+
+    return params, paramsErr, chisq, paramsBootMean
