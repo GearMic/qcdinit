@@ -212,4 +212,5 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None)
 
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
 
+    # TODO: return bootstrap mean
     return params, paramsErr, chisq
