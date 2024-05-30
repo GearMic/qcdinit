@@ -1,2 +1,3 @@
 data/*.aff
 */*.pyc
+*/__pycache__

@@ -176,23 +176,6 @@ def bin_error_plot(data, fig, ax, label=None, max_binsize=100, filename=None, dp
         fig.savefig(filename, dpi=dpi)
 
 
-# def bootstrapping():
-#     # bootstrapping for parameter errors
-#     aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
-#     for i in range(nStraps):
-#         sampleIndex = np.random.choice(iRange, dataLen)
-#         xSample = x[sampleIndex]
-#         ySample = y[sampleIndex]
-#         yErrSample = yErr[sampleIndex]
-
-#         poptBoot, _ = optimize.curve_fit(
-#             exp_fn, xSample, ySample, initialGuess, yErrSample)
-#         aArr[i], bArr[i] = poptBoot
-
-#     aErr = np.std(aArr, ddof=1)
-#     bErr = np.std(bArr, ddof=1)
-
-
 def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
     """
     exponential fit of the form f(x) = a * exp(-b * x).
@@ -215,8 +198,9 @@ def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
     iRange = range(dataLen)
 
     # individual fit for parameter values
-    popt, pcov = optimize.curve_fit(exp_fn, x, y, initialGuess, yErr)
+    popt, pcov, infodict, _, _ = optimize.curve_fit(exp_fn, x, y, initialGuess, yErr, full_output=True)
     a, b = popt
+    chisq = np.sum(infodict['fvec']**2)
 
     # bootstrapping for parameter errors
     aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
@@ -233,4 +217,43 @@ def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
     aErr = np.std(aArr, ddof=1)
     bErr = np.std(bArr, ddof=1)
 
-    return a, b, aErr, bErr
+    return a, b, aErr, bErr, chisq
+
+
+def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
+    """
+    exponential fit of the form f(x) = a * exp(-b * x).
+    returns a, b, a_err, b_err. Errors calculated using bootstrapping.
+    if yErr is None, yErr is initialized to an array of ones.
+    """
+
+    # prepare data arrays
+    dataLen = len(x)
+    if yErr is None:
+        yErr = np.ones(dataLen)
+    if sliceLen is None:
+        sliceLen = len(x)
+    x = x[:sliceLen]
+    y = y[:sliceLen]
+    yErr = yErr[:sliceLen]
+    iRange = range(dataLen)
+
+    # individual fit for parameter values
+    params, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr, full_output=True)
+    chisq = np.sum(infodict['fvec']**2)
+
+    # bootstrapping for parameter errors
+    paramsArr = np.empty((nStraps, len(params)))
+    for i in range(nStraps):
+        sampleIndex = np.random.choice(iRange, dataLen)
+        xSample = x[sampleIndex]
+        ySample = y[sampleIndex]
+        yErrSample = yErr[sampleIndex]
+
+        paramsBoot, _ = optimize.curve_fit(
+            fit_fn, xSample, ySample, initialGuess, yErrSample)
+        paramsArr[i] = np.array(paramsBoot)
+
+    paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
+
+    return params, paramsErr, chisq

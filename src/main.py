@@ -34,55 +34,62 @@ ax.yaxis.set_major_formatter(plt.ScalarFormatter())
 # ax.errorbar(tau, p2p, p2pErr, fmt='.')
 ax.errorbar(tau, p2p, p2pErr)
 
-# # exponential fit to find pion mass
-# slice = (8, 58)
-# a, b, aErr, bErr = exp_fit_bootstrap(
-#     tau[slice[0]:slice[1]], p2p[slice[0]:slice[1]], (1.5, 0.1), 10000, p2pErr, None)
-# prerr(a, aErr, 'a')
-# prerr(b, bErr, 'b (pion mass)')
-
-# hbarc = 1.054571 * 299702458 / 1.602176 * (1e-34*1e19*1e15*1e6)
-# mIdeal = 0.06821 * 139.57039 / hbarc
-# print('pion mass ideal: ', mIdeal)
-
-# # add fit line to plot
-# xFit = tau[slice[0]:slice[1]]
-# yFit = a * np.exp(-b * xFit)
-
-# ax.plot(xFit, yFit, color='xkcd:crimson')
-# fig.savefig('../plot/visual_log.pdf')
-
+# fit to find pion mass
 def fit_fn(x, C, E):
     T = 160 # TODO: Why do we need this?
     return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
-# fit and plot
+slice = (8, 58)
 tau = tau[slice[0]:slice[1]]
 p2p = p2p[slice[0]:slice[1]]
-slice = (8, 58)
-initialGuess = (1.5, 0.1)
+p2pErr = p2pErr[slice[0]:slice[1]]
 
-popt, pcov = optimize.curve_fit(fit_fn, tau, p2p, p2pErr[slice[0]:slice[1]])
-C, E = popt
+params, paramsErr, _ = fit_bootstrap(
+    fit_fn, tau, p2p, (1.5, 0.1), 10000, p2pErr, None)
+C, E = params
+CErr, EErr = paramsErr
+prerr(C, CErr, 'C')
+prerr(E, EErr, 'E (pion mass)')
 
-xFit = tau[slice[0]:slice[1]]
+hbarc = 1.054571 * 299702458 / 1.602176 * (1e-34*1e19*1e15*1e6)
+mIdeal = 0.06821 * 139.57039 / hbarc
+print('pion mass ideal: ', mIdeal)
+
+# add fit line to plot
+xFit = tau
 yFit = fit_fn(xFit, C, E)
 
 ax.plot(xFit, yFit, color='xkcd:crimson')
-fig.savefig('../plot/visual_log_2.pdf')
+fig.savefig('../plot/visual_log.pdf')
 
-# bootstrapping for parameter errors
-dataLen = len()
-iRange = range(dataLen)
-nStraps = 10000
-aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
-for i in range(nStraps):
-    sampleIndex = np.random.choice(iRange, dataLen)
-    yErrSample = yErr[sampleIndex]
 
-    poptBoot, _ = optimize.curve_fit(
-        exp_fn, tau, p2p, initialGuess, p2pErr)
-    aArr[i], bArr[i] = poptBoot
+# # fit and plot
+# tau = tau[slice[0]:slice[1]]
+# p2p = p2p[slice[0]:slice[1]]
+# slice = (8, 58)
+# initialGuess = (1.5, 0.1)
 
-aErr = np.std(aArr, ddof=1)
-bErr = np.std(bArr, ddof=1)
+# popt, pcov = optimize.curve_fit(fit_fn, tau, p2p, p2pErr[slice[0]:slice[1]])
+# C, E = popt
+
+# xFit = tau[slice[0]:slice[1]]
+# yFit = fit_fn(xFit, C, E)
+
+# ax.plot(xFit, yFit, color='xkcd:crimson')
+# fig.savefig('../plot/visual_log_2.pdf')
+
+# # bootstrapping for parameter errors
+# dataLen = len()
+# iRange = range(dataLen)
+# nStraps = 10000
+# aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
+# for i in range(nStraps):
+#     sampleIndex = np.random.choice(iRange, dataLen)
+#     yErrSample = yErr[sampleIndex]
+
+#     poptBoot, _ = optimize.curve_fit(
+#         exp_fn, tau, p2p, initialGuess, p2pErr)
+#     aArr[i], bArr[i] = poptBoot
+
+# aErr = np.std(aArr, ddof=1)
+# bErr = np.std(bArr, ddof=1)
