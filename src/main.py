@@ -134,3 +134,6 @@ ax.set_ylabel('resulting $E_o$')
 ax.grid()
 ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red')
 fig.savefig('../plot/stability.pdf')
+
+
+# TODO: don't halve fit interval
