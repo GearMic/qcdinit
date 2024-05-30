@@ -31,7 +31,8 @@ fig, ax = plt.subplots()
 ax.set_yscale('log')
 ax.yaxis.set_major_formatter(plt.ScalarFormatter())
 
-ax.errorbar(tau, p2p, p2pErr, fmt='x')
+# ax.errorbar(tau, p2p, p2pErr, fmt='.')
+ax.errorbar(tau, p2p, p2pErr)
 
 # # exponential fit to find pion mass
 # slice = (8, 58)
@@ -53,14 +54,35 @@ ax.errorbar(tau, p2p, p2pErr, fmt='x')
 
 def fit_fn(x, C, E):
     T = 160 # TODO: Why do we need this?
-    return C(np.exp(-E * x) + np.exp(-(T - x) * E))
+    return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
-popt, pcov = optimize.curve_fit(tau[slice[0]:slice[1]], p2p[slice[0]:slice[1]], initialGuess, p2pErr)
+# fit and plot
+tau = tau[slice[0]:slice[1]]
+p2p = p2p[slice[0]:slice[1]]
+slice = (8, 58)
+initialGuess = (1.5, 0.1)
+
+popt, pcov = optimize.curve_fit(fit_fn, tau, p2p, p2pErr[slice[0]:slice[1]])
 C, E = popt
 
-# add fit line to plot
 xFit = tau[slice[0]:slice[1]]
 yFit = fit_fn(xFit, C, E)
 
 ax.plot(xFit, yFit, color='xkcd:crimson')
 fig.savefig('../plot/visual_log_2.pdf')
+
+# bootstrapping for parameter errors
+dataLen = len()
+iRange = range(dataLen)
+nStraps = 10000
+aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
+for i in range(nStraps):
+    sampleIndex = np.random.choice(iRange, dataLen)
+    yErrSample = yErr[sampleIndex]
+
+    poptBoot, _ = optimize.curve_fit(
+        exp_fn, tau, p2p, initialGuess, p2pErr)
+    aArr[i], bArr[i] = poptBoot
+
+aErr = np.std(aArr, ddof=1)
+bErr = np.std(bArr, ddof=1)

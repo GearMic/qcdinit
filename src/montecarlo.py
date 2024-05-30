@@ -175,6 +175,24 @@ def bin_error_plot(data, fig, ax, label=None, max_binsize=100, filename=None, dp
     if not (filename is None):
         fig.savefig(filename, dpi=dpi)
 
+
+# def bootstrapping():
+#     # bootstrapping for parameter errors
+#     aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
+#     for i in range(nStraps):
+#         sampleIndex = np.random.choice(iRange, dataLen)
+#         xSample = x[sampleIndex]
+#         ySample = y[sampleIndex]
+#         yErrSample = yErr[sampleIndex]
+
+#         poptBoot, _ = optimize.curve_fit(
+#             exp_fn, xSample, ySample, initialGuess, yErrSample)
+#         aArr[i], bArr[i] = poptBoot
+
+#     aErr = np.std(aArr, ddof=1)
+#     bErr = np.std(bArr, ddof=1)
+
+
 def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
     """
     exponential fit of the form f(x) = a * exp(-b * x).
