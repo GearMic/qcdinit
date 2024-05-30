@@ -33,20 +33,27 @@ ax.yaxis.set_major_formatter(plt.ScalarFormatter())
 
 ax.errorbar(tau, p2p, p2pErr, fmt='x')
 
-# exponential fit to find pion mass
-slice = (8, 58)
-a, b, aErr, bErr = exp_fit_bootstrap(
-    tau[slice[0]:slice[1]], p2p[slice[0]:slice[1]], (1.5, 0.1), 10000, p2pErr, None)
-prerr(a, aErr, 'a')
-prerr(b, bErr, 'b (pion mass)')
+# # exponential fit to find pion mass
+# slice = (8, 58)
+# a, b, aErr, bErr = exp_fit_bootstrap(
+#     tau[slice[0]:slice[1]], p2p[slice[0]:slice[1]], (1.5, 0.1), 10000, p2pErr, None)
+# prerr(a, aErr, 'a')
+# prerr(b, bErr, 'b (pion mass)')
 
-hbarc = 1.054571 * 299702458 / 1.602176 * (1e-34*1e19*1e15*1e6)
-mIdeal = 0.06821 * 139.57039 / hbarc
-print('pion mass ideal: ', mIdeal)
+# hbarc = 1.054571 * 299702458 / 1.602176 * (1e-34*1e19*1e15*1e6)
+# mIdeal = 0.06821 * 139.57039 / hbarc
+# print('pion mass ideal: ', mIdeal)
 
-# add fit line to plot
-xFit = tau[slice[0]:slice[1]]
-yFit = a * np.exp(-b * xFit)
+# # add fit line to plot
+# xFit = tau[slice[0]:slice[1]]
+# yFit = a * np.exp(-b * xFit)
 
-ax.plot(xFit, yFit, color='xkcd:crimson')
-fig.savefig('../plot/visual_log.pdf')
+# ax.plot(xFit, yFit, color='xkcd:crimson')
+# fig.savefig('../plot/visual_log.pdf')
+
+def fit_fn(x, C, E):
+    T = 160
+    return C(np.exp(-E * x) + np.exp(-(T - x) * E))
+
+popt, pcov = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr)
+C, E = popt
