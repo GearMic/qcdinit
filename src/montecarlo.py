@@ -212,7 +212,7 @@ def exp_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
             exp_fn, xSample, ySample, initialGuess, yErrSample)
         aArr[i], bArr[i] = poptBoot
 
-    aErr = np.std(aArr)
-    bErr = np.std(bArr)
+    aErr = np.std(aArr, ddof=1)
+    bErr = np.std(bArr, ddof=1)
 
     return a, b, aErr, bErr
