@@ -52,8 +52,15 @@ ax.errorbar(tau, p2p, p2pErr, fmt='x')
 # fig.savefig('../plot/visual_log.pdf')
 
 def fit_fn(x, C, E):
-    T = 160
+    T = 160 # TODO: Why do we need this?
     return C(np.exp(-E * x) + np.exp(-(T - x) * E))
 
-popt, pcov = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr)
+popt, pcov = optimize.curve_fit(tau[slice[0]:slice[1]], p2p[slice[0]:slice[1]], initialGuess, p2pErr)
 C, E = popt
+
+# add fit line to plot
+xFit = tau[slice[0]:slice[1]]
+yFit = fit_fn(xFit, C, E)
+
+ax.plot(xFit, yFit, color='xkcd:crimson')
+fig.savefig('../plot/visual_log_2.pdf')
