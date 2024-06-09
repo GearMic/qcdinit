@@ -1,13 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 from qcdinit import *
 from montecarlo import *
 
 
 # data importing
-rawFilename = '../data/pion.local-local.u-gf-d-gi.px0_py0_pz0.h5'
-arrFilename = '../data/confs.npy'
+rawFilename = 'data/pion.local-local.u-gf-d-gi.px0_py0_pz0.h5'
+arrFilename = 'data/confs.npy'
 confs = load_mean_data(rawFilename, arrFilename, False)
 # the second half of each configuration is redundant TODO: is this correct?
 confs = confs[:, :confs.shape[1]//2].real
@@ -17,7 +18,7 @@ fig, ax = plt.subplots()
 for i in np.arange(0, confs.shape[1], 20):
     obs = confs[:, i]
     bin_error_plot(obs, fig, ax, "$t=%i$" % i, 10)
-fig.savefig('../plot/bin_error.pdf')
+fig.savefig('plot/bin_error.pdf')
 
 # bin and mean
 binsize = 1 # visually determined from error plot
@@ -32,11 +33,11 @@ tau = np.arange(len(p2p))
 fig, ax = plt.subplots()
 ax.set_title('Correlator fit')
 ax.set_xlabel('$\\tau$ [lattice spacing]')
-ax.set_ylabel('Pion-Pion Correlator $\cdot (-1)$')
+ax.set_ylabel(r'Pion-Pion Correlator $\cdot (-1)$')
 ax.grid()
 
 ax.set_yscale('log')
-ax.yaxis.set_major_formatter(plt.ScalarFormatter())
+ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
 ax.errorbar(tau, -p2p, p2pErr, fmt='x', label='Data')
 
@@ -71,7 +72,7 @@ yFit = fit_fn(xFit, C, E)
 ax.plot(xFit, -yFit, color='xkcd:crimson', label='Fit')
 
 ax.legend()
-fig.savefig('../plot/visual_log_2.pdf')
+fig.savefig('plot/visual_log_2.pdf')
 
 
 # stability depending on fit interval
@@ -105,6 +106,6 @@ ax.set_ylabel('resulting $E_o$')
 ax.grid()
 # ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red')
 ax.errorbar(range(nFitIntervals), EArr, EErrArr, fmt='x', color='tab:red')
-fig.savefig('../plot/stability.pdf')
+fig.savefig('plot/stability.pdf')
 
 # TODO: inspect "quantization of errors"
