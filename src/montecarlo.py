@@ -288,26 +288,6 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
     # error and bootstrap mean
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
     paramsBootMean = np.sum(paramsArr) / nStraps
-    print("paramsErr", paramsErr)
-
-#    # debugging
-#    if paramsErr[1] > 1e-4:
-#        print("Err:", paramsErr)
-#        for i in range(len(paramsArr)):
-#            if paramsArr[i, 1] < 0:
-#                print(paramsArr[i-2:i+3])
-#        for i in range(nStraps):
-#            if paramsArr[i, 1] < 0:
-#                fullprint("sample index", np.sort(indexArr[i]))
-#                print("test")
-#                fullprint("sample index+1", np.sort(indexArr[i+1%nStraps]))
-#
-#    print("std:", np.std(indexArr))
-
-    if paramsErr[1] > 1e-4:
-        print("---end wrong---")
-    else:
-        print("---end---")
 
     return params, paramsErr, chisq, paramsBootMean
 
