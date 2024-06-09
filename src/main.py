@@ -70,12 +70,12 @@ for i in range(nFitIntervals):
 
 # stability plot
 fig, ax = plt.subplots()
-ax.set_title('stability plot')
+ax.set_title('Stability Plot')
 ax.set_xlabel('lower boundary of fit')
 ax.set_ylabel('resulting $E_o$')
 ax.grid()
-ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red')
-#ax.errorbar(range(nFitIntervals), EArr, EErrArr, fmt='x', color='tab:red')
+ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red', label='upper boundary = %i' % upper)
+ax.legend()
 fig.savefig('plot/stability.pdf')
 print(EArr)
 print(EErrArr)
@@ -83,9 +83,10 @@ print(EErrArr)
 
 # plot
 print('-- plot')
+slice = (30, 50) # boundaries determined visually (from stability plot)
 
 fig, ax = plt.subplots()
-ax.set_title('Correlator fit')
+ax.set_title('Correlator and fit in range %s' % str(slice))
 ax.set_xlabel('$\\tau$ [lattice spacing]')
 ax.set_ylabel(r'Pion-Pion Correlator $\cdot (-1)$')
 ax.grid()
@@ -93,12 +94,12 @@ ax.grid()
 ax.set_yscale('log')
 ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
-ax.errorbar(tau, -p2p, p2pErr, fmt='x', label='Data')
+ax.errorbar(tau, -p2p, p2pErr, fmt='.', color='xkcd:red', label='Data', zorder=1)
 
 
 # fit to find pion mass
 print('-- fit')
-slice = (30, 50) # boundaries determined visually (from stability plot)
+dataLen = slice[1]-slice[0]
 tauSlice = tau[slice[0]:slice[1]]
 p2pSlice = p2p[slice[0]:slice[1]]
 p2pErrSlice = p2pErr[slice[0]:slice[1]]
@@ -119,7 +120,7 @@ resultsFrame = pd.DataFrame({
     '$X$': params,
     r'$\delta X$': paramsErr,
     r'$\overline X_B$': paramsBootMean,
-    r'$\Chi^2$': (chisq, '')
+    r'$\chi^2/\mathrm{dof}$': (chisq / (dataLen-2), '')
 })
 print("results:\n", resultsFrame)
 resultsFrame.to_latex('latex/example_results.tex')
@@ -128,10 +129,10 @@ resultsFrame.to_latex('latex/example_results.tex')
 xFit = tauSlice
 yFit = fit_fn(xFit, C, E)
 
-ax.plot(xFit, -yFit, color='xkcd:crimson', label='Fit')
+ax.plot(xFit, -yFit, color='blue', label='Fit', zorder=2)
 
 ax.legend()
-fig.savefig('plot/visual_log_2.pdf')
+fig.savefig('plot/correlator.pdf')
 
 # add bootstrap range to plot
 print('-- bootstrap range plot')

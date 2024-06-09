@@ -247,7 +247,9 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
 
     # individual fit for parameter values
     params, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr, full_output=True)
-    chisq = np.sum(infodict['fvec']**2)
+    #chisq = np.sum(infodict['fvec']**2)
+    # also see this https://stackoverflow.com/questions/52591979/how-to-obtain-the-chi-squared-value-as-an-output-of-scipy-optimize-curve-fit
+    chisq = np.sum( ( (y-fit_fn(x, *params)) / yErr )**2 )
     nParams = len(params)
 
     # prepare data arrays

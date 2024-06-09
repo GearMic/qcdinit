@@ -1,0 +1,39 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper, left=1.5cm, right=1.5cm, top=3.5cm]{geometry}
+\usepackage[ngerman]{babel}
+\usepackage{graphicx}
+%\usepackage{multicol}
+%\usepackage{amssymb}
+%\usepackage{titlesec}
+%\usepackage{wrapfig}
+%\usepackage{blindtext}
+%\usepackage{lipsum}
+%\usepackage{caption}
+%\usepackage{listings}
+%\usepackage{fancyhdr}
+%\usepackage{nopageno}
+%\usepackage{authblk}
+%\usepackage{amsmath} % tons of math stuff
+%\usepackage{mathtools} % e.g. alignment within matrix
+%\usepackage{bm} % provides shorthand for bold in math mode
+%\usepackage[ISO]{diffcoeff}
+%\usepackage{xcolor}
+%\usepackage{csquotes} % e.g. provides \enquote
+%\fancyhf[]{}
+\usepackage{booktabs}
+\usepackage{atbegshi}% http://ctan.org/pkg/atbegshi
+
+\AtBeginDocument{\AtBeginShipoutNext{\AtBeginShipoutDiscard}} % remove empty page
+\addtocounter{page}{-1}
+
+\begin{document}
+
+\begin{center}
+    \include{example_results}
+\end{center}
+
+    \includegraphics[width=1.0\textwidth, angle=0]{stability.pdf}
+
+    \includegraphics[width=1.0\textwidth, angle=0]{correlator.pdf}
+
+\end{document}
