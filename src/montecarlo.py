@@ -276,19 +276,24 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
             paramsBoot = np.array(paramsBoot)
 
             # check if params are in the given range
+            # success = True
+            # if not (paramRange is None):
+            #     for param, prange in zip(paramsBoot, paramRange):
+            #         if not (param >= prange[0] and param <= prange[1]):
+            #             success = False
             success = True
             if not (paramRange is None):
                 for param, prange in zip(paramsBoot, paramRange):
-                    if not (param >= prange[0] and param <= prange[1]):
-                        success = False
+                    isInRange = param >= prange[0] and param <= prange[1]
+                    success = success and isInRange # only update success if hasn't previously failed
             
             # add strap params to array
             paramsArr[i] = paramsBoot
     
     # error and bootstrap mean
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
-    paramsBootMean = np.sum(paramsArr, 1) / nStraps
+    paramsBootMean = np.sum(paramsArr, 0) / nStraps
 
-    return params, paramsErr, chisq, paramsBootMean
+    return params, paramsErr, chisq, paramsBootMean, paramsArr
 
 
