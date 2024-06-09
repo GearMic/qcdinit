@@ -50,7 +50,7 @@ ax.errorbar(tau, -p2p, p2pErr, fmt='x', label='Data')
 
 # fit to find pion mass
 initialGuess = (1.5, 0.1)
-nStraps = 200
+nStraps = 1000
 
 def fit_fn(x, C, E):
     T = 160
@@ -103,7 +103,7 @@ for i in range(nFitIntervals):
 #    paramsEerr = (Cerr, Eerr)
 
     params, paramsErr, _, paramsBootMean = fit_bootstrap(
-        fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pErrSlice, None)
+        fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf)))
     EArr[i] = params[1]
 
 ##    EArr[i] = paramsBootMean[1] ##

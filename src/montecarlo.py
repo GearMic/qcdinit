@@ -235,7 +235,7 @@ def cosh_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
     return a, b, aErr, bErr
 
 
-def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None, successCondition=(np.nan, np.nan)):
+def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=None):
     """
     returns fit parameters and their errors.
     Errors calculated using bootstrapping.
@@ -245,56 +245,69 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None,
     TODO: fix the wrong parameter problem for the normal fit, not just for bootstrapping
     """
 
-    # prepare data arrays
-    dataLen = len(x)
-    if yErr is None:
-        yErr = np.ones(dataLen)
-    if sliceLen is None:
-        sliceLen = len(x)
-    x = x[:sliceLen]
-    y = y[:sliceLen]
-    yErr = yErr[:sliceLen]
-
     # individual fit for parameter values
     params, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr, full_output=True)
     chisq = np.sum(infodict['fvec']**2)
+    nParams = len(params)
 
+    # prepare data arrays
+    dataLen = len(x)
+
+    if yErr is None:
+        yErr = np.ones(dataLen)
+    
     # bootstrapping for parameter errors
-    paramsArr = np.zeros((nStraps, len(params)))
-    indexArr = np.zeros((nStraps, dataLen))
-    paramsBootSum = 0
+    paramsErr, paramsBootMean = (), 0
+    paramsArr = np.zeros((nStraps, nParams))
+
     for i in range(nStraps):
-        rng = np.random.default_rng()
-        sampleIndex = rng.choice(dataLen, dataLen, replace=True)
+        success = False
+        while not success:
+            # randomly sample from data and fit to that sample
+            rng = np.random.default_rng()
+            sampleIndex = rng.choice(dataLen, dataLen, replace=True)
 
-        indexArr[i] = sampleIndex
-        xSample = x[sampleIndex]
-        ySample = y[sampleIndex]
-        yErrSample = yErr[sampleIndex]
+            xSample = x[sampleIndex]
+            ySample = y[sampleIndex]
+            yErrSample = yErr[sampleIndex]
 
-        paramsBoot, _ = optimize.curve_fit(
-            fit_fn, xSample, ySample, initialGuess, yErrSample)
-        paramsBoot = np.array(paramsBoot)
-        paramsArr[i] = paramsBoot
-        paramsBootSum += paramsBoot
-        # if i==3: print(paramsArr[:5])
+            paramsBoot, _ = optimize.curve_fit(
+                fit_fn, xSample, ySample, initialGuess, yErrSample)
+            paramsBoot = np.array(paramsBoot)
 
+            # check if params are in the given range
+            success = True
+            if not (paramRange is None):
+                for param, prange in zip(paramsBoot, paramRange):
+                    if not (param >= prange[0] and param <= prange[1]):
+                        success = False
+            
+            # add strap params to array
+            paramsArr[i] = paramsBoot
+    
+    # error and bootstrap mean
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
-    paramsBootMean = paramsBootSum / nStraps
+    paramsBootMean = np.sum(paramsArr) / nStraps
+    print("paramsErr", paramsErr)
 
-    # debugging
+#    # debugging
+#    if paramsErr[1] > 1e-4:
+#        print("Err:", paramsErr)
+#        for i in range(len(paramsArr)):
+#            if paramsArr[i, 1] < 0:
+#                print(paramsArr[i-2:i+3])
+#        for i in range(nStraps):
+#            if paramsArr[i, 1] < 0:
+#                fullprint("sample index", np.sort(indexArr[i]))
+#                print("test")
+#                fullprint("sample index+1", np.sort(indexArr[i+1%nStraps]))
+#
+#    print("std:", np.std(indexArr))
+
     if paramsErr[1] > 1e-4:
-        print(dataLen, indexArr.shape)
-        print("Err:", paramsErr)
-        #print(indexArr)
-        fullprint(paramsArr)
-        for i in range(nStraps):
-            if paramsArr[i, 1] < 0:
-                fullprint("sample index", np.sort(indexArr[i]))
-                print("test")
-                fullprint("sample index+1", np.sort(indexArr[i+1%nStraps]))
-
-    print("std:", np.std(indexArr))
+        print("---end wrong---")
+    else:
+        print("---end---")
 
     return params, paramsErr, chisq, paramsBootMean
 
