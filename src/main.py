@@ -12,9 +12,11 @@ doBinErrorPlot = False
 print('- load data')
 rawFilename = 'data/pion.local-local.u-gf-d-gi.px0_py0_pz0.h5'
 arrFilename = 'data/confs.npy'
-confs = load_mean_data(rawFilename, arrFilename, False)
-# the second half of each configuration is redundant TODO: is this correct?
-confs = confs[:, :confs.shape[1]//2].real
+confs = load_mean_data(rawFilename, arrFilename, False).real
+halfIndex = int(np.floor(confs.shape[1]/2))
+confs = confs[:, :halfIndex]
+## the two halves of a configuration are redundant so mean over them
+#confs = (confs[:, :halfIndex] + confs[:, -halfIndex:]) / 2 # TODO: not working properly
 
 # bin error plot
 if doBinErrorPlot:
@@ -87,7 +89,6 @@ print('- stability')
 upper = 58
 lowerValues = np.arange(1, 15)
 nFitIntervals = len(lowerValues)
-lowerValues = np.full(nFitIntervals, 15) # debugging purposes
 EArr, EErrArr = np.zeros(nFitIntervals), np.zeros(nFitIntervals)
 
 for i in range(nFitIntervals):
@@ -97,20 +98,12 @@ for i in range(nFitIntervals):
     p2pSlice = p2p[slice[0]:slice[1]]
     p2pErrSlice = p2pErr[slice[0]:slice[1]]
 
-#    C, E, Cerr, Eerr = cosh_fit_bootstrap(
-#        tauSlice, p2pSlice, initialGuess, nStraps, p2pErrSlice, None)
-#    params = (C, E)
-#    paramsEerr = (Cerr, Eerr)
-
     params, paramsErr, _, paramsBootMean = fit_bootstrap(
-        fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf)))
+        fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
+        yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
+    )
     EArr[i] = params[1]
-
-##    EArr[i] = paramsBootMean[1] ##
     EErrArr[i] = paramsErr[1]
-
-# print(EErr)
-# print(EErrArr)
 
 # stability plot
 fig, ax = plt.subplots()
@@ -118,10 +111,8 @@ ax.set_title('stability plot')
 ax.set_xlabel('lower boundary of fit [lattice spacing]')
 ax.set_ylabel('resulting $E_o$')
 ax.grid()
-# ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red')
-ax.errorbar(range(nFitIntervals), EArr, EErrArr, fmt='x', color='tab:red')
+ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red')
+#ax.errorbar(range(nFitIntervals), EArr, EErrArr, fmt='x', color='tab:red')
 fig.savefig('plot/stability.pdf')
 print(EArr)
 print(EErrArr)
-
-# TODO: inspect "quantization of errors"

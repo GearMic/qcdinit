@@ -287,7 +287,7 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
     
     # error and bootstrap mean
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
-    paramsBootMean = np.sum(paramsArr) / nStraps
+    paramsBootMean = np.sum(paramsArr, 1) / nStraps
 
     return params, paramsErr, chisq, paramsBootMean
 
