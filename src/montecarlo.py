@@ -1,7 +1,22 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.optimize as optimize
 
+
+def fullprint0(*args, **kwargs):
+    """https://stackoverflow.com/questions/1987694/how-do-i-print-the-full-numpy-array-without-truncation/24542498#24542498"""
+    from pprint import pprint
+    import sys
+    opt = np.get_printoptions()
+    np.set_printoptions(threshold=sys.maxsize)
+    pprint(*args, **kwargs)
+    np.set_printoptions(**opt)
+
+def fullprint(*args, **kwargs):
+    """https://stackoverflow.com/questions/1987694/how-do-i-print-the-full-numpy-array-without-truncation/24542498#24542498"""
+    import sys
+
+    with np.printoptions(threshold=sys.maxsize):
+        print(*args, **kwargs)
 
 def bin_normalized(data, n_bins, xlower, xupper):
     rows, cols = data.shape
@@ -176,12 +191,16 @@ def bin_error_plot(data, fig, ax, label=None, max_binsize=100, filename=None, dp
         fig.savefig(filename, dpi=dpi)
 
 
-def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
+def cosh_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
     """
-    exponential fit of the form f(x) = a * exp(-b * x).
+    specific cosh fit.
     returns a, b, a_err, b_err. Errors calculated using bootstrapping.
     if yErr is None, yErr is initialized to an array of ones.
     """
+
+    def fit_fn(x, C, E):
+        T = 160
+        return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
     # prepare data arrays
     dataLen = len(x)
@@ -195,6 +214,48 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None)
     iRange = range(dataLen)
 
     # individual fit for parameter values
+    popt, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr)
+    a, b = popt
+
+    # bootstrapping for parameter errors
+    aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
+    for i in range(nStraps):
+        sampleIndex = np.random.choice(iRange, dataLen)
+        xSample = x[sampleIndex]
+        ySample = y[sampleIndex]
+        yErrSample = yErr[sampleIndex]
+
+        poptBoot, _ = optimize.curve_fit(
+            fit_fn, xSample, ySample, initialGuess, yErrSample)
+        aArr[i], bArr[i] = poptBoot
+
+    aErr = np.std(aArr, ddof=1)
+    bErr = np.std(bArr, ddof=1)
+
+    return a, b, aErr, bErr
+
+
+def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None, successCondition=(np.nan, np.nan)):
+    """
+    returns fit parameters and their errors.
+    Errors calculated using bootstrapping.
+    if yErr is None, yErr is initialized to an array of ones.
+    paramRange: optional array of arrays, the individual arrays contain limits for the parameters.
+    If a parameter is not in the range, the configuration is regenerated until it is.
+    TODO: fix the wrong parameter problem for the normal fit, not just for bootstrapping
+    """
+
+    # prepare data arrays
+    dataLen = len(x)
+    if yErr is None:
+        yErr = np.ones(dataLen)
+    if sliceLen is None:
+        sliceLen = len(x)
+    x = x[:sliceLen]
+    y = y[:sliceLen]
+    yErr = yErr[:sliceLen]
+
+    # individual fit for parameter values
     params, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr, full_output=True)
     chisq = np.sum(infodict['fvec']**2)
 
@@ -203,7 +264,9 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None)
     indexArr = np.zeros((nStraps, dataLen))
     paramsBootSum = 0
     for i in range(nStraps):
-        sampleIndex = np.random.choice(iRange, dataLen, replace=True)
+        rng = np.random.default_rng()
+        sampleIndex = rng.choice(dataLen, dataLen, replace=True)
+
         indexArr[i] = sampleIndex
         xSample = x[sampleIndex]
         ySample = y[sampleIndex]
@@ -220,8 +283,19 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, sliceLen=None)
     paramsBootMean = paramsBootSum / nStraps
 
     # debugging
-    if paramsErr[1] < 1e-4:
-        print(paramsErr)
-        print(indexArr)
+    if paramsErr[1] > 1e-4:
+        print(dataLen, indexArr.shape)
+        print("Err:", paramsErr)
+        #print(indexArr)
+        fullprint(paramsArr)
+        for i in range(nStraps):
+            if paramsArr[i, 1] < 0:
+                fullprint("sample index", np.sort(indexArr[i]))
+                print("test")
+                fullprint("sample index+1", np.sort(indexArr[i+1%nStraps]))
+
+    print("std:", np.std(indexArr))
 
     return params, paramsErr, chisq, paramsBootMean
+
+
