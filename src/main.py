@@ -11,7 +11,41 @@ def fit_fn(x, C, E):
     T = 160
     return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
+def stability_plot(tau, p2p, p2pErr):
+    upper = 50
+    lowerValues = np.arange(8, 40)
+    nFitIntervals = len(lowerValues)
+    EArr, EErrArr = np.zeros(nFitIntervals), np.zeros(nFitIntervals)
+    
+    for i in range(nFitIntervals):
+        slice = (lowerValues[i], upper)
+    
+        tauSlice = tau[slice[0]:slice[1]]
+        p2pSlice = p2p[slice[0]:slice[1]]
+        p2pErrSlice = p2pErr[slice[0]:slice[1]]
+    
+        params, paramsErr, _, _, _ = fit_bootstrap(
+            fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
+            yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
+        )
+        EArr[i] = params[1]
+        EErrArr[i] = paramsErr[1]
+    
+    # stability plot
+    fig, ax = plt.subplots()
+    ax.set_title('Stability Plot')
+    ax.set_xlabel('lower boundary of fit')
+    ax.set_ylabel('resulting $E_o$')
+    ax.grid()
+    ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red', label='upper boundary = %i' % upper)
+    ax.legend()
+    fig.savefig('plot/stability.pdf')
+    print(EArr)
+    print(EErrArr)
+
+
 doBinErrorPlot = False
+doStabilityPlot = False
 initialGuess = (1.5, 0.1)
 nStraps = 1000
 
@@ -47,38 +81,9 @@ tau = np.arange(len(p2p))
 
 
 # stability depending on fit interval
-print('- stability')
-upper = 50
-lowerValues = np.arange(8, 40)
-nFitIntervals = len(lowerValues)
-EArr, EErrArr = np.zeros(nFitIntervals), np.zeros(nFitIntervals)
-
-for i in range(nFitIntervals):
-    slice = (lowerValues[i], upper)
-
-    tauSlice = tau[slice[0]:slice[1]]
-    p2pSlice = p2p[slice[0]:slice[1]]
-    p2pErrSlice = p2pErr[slice[0]:slice[1]]
-
-    params, paramsErr, _, paramsBootMean, _ = fit_bootstrap(
-        fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-        yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
-    )
-    EArr[i] = params[1]
-    EErrArr[i] = paramsErr[1]
-
-
-# stability plot
-fig, ax = plt.subplots()
-ax.set_title('Stability Plot')
-ax.set_xlabel('lower boundary of fit')
-ax.set_ylabel('resulting $E_o$')
-ax.grid()
-ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red', label='upper boundary = %i' % upper)
-ax.legend()
-fig.savefig('plot/stability.pdf')
-print(EArr)
-print(EErrArr)
+if doStabilityPlot:
+    print('- stability')
+    stability_plot(tau, p2p, p2pErr)
 
 
 # plot
@@ -87,14 +92,14 @@ slice = (30, 50) # boundaries determined visually (from stability plot)
 
 fig, ax = plt.subplots()
 ax.set_title('Correlator and fit in range %s' % str(slice))
-ax.set_xlabel('$\\tau$ [lattice spacing]')
+ax.set_xlabel('$\\tau$')
 ax.set_ylabel(r'Pion-Pion Correlator $\cdot (-1)$')
 ax.grid()
 
 ax.set_yscale('log')
 ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
-ax.errorbar(tau, -p2p, p2pErr, fmt='.', color='xkcd:red', label='Data', zorder=1)
+ax.errorbar(tau, -p2p, p2pErr, fmt='.', color='xkcd:red', label='Data', zorder=2)
 
 
 # fit to find pion mass
@@ -129,11 +134,26 @@ resultsFrame.to_latex('latex/example_results.tex')
 xFit = tauSlice
 yFit = fit_fn(xFit, C, E)
 
-ax.plot(xFit, -yFit, color='blue', label='Fit', zorder=2)
+ax.plot(xFit, -yFit, color='blue', label='Fit', zorder=5)
+
+# add bootstrap range to plot
+print('-- bootstrap range plot')
+rangeColor = 'xkcd:turquoise'
+
+yLower, yUpper, yMean = np.zeros(dataLen), np.zeros(dataLen), np.zeros(dataLen)   
+Cvalues, Evalues = paramsArr.T
+Cvalues = -Cvalues # make values positive for plot
+for i in range(dataLen):
+    t = xFit[i]
+
+    yRange = fit_fn(t, Cvalues, Evalues)
+    yLower[i], yUpper[i], yMean[i] = yRange.min(), yRange.max(), yRange.mean()
+
+ax.fill_between(xFit, yLower, yUpper, alpha=0.5, label='bootstrap range', color=rangeColor, zorder=6)
+ax.plot(xFit, yMean, label='bootstrap mean', color=rangeColor, zorder=4)
+print(yLower)
+print(yUpper)
 
 ax.legend()
 fig.savefig('plot/correlator.pdf')
 
-# add bootstrap range to plot
-print('-- bootstrap range plot')
-## TODO
