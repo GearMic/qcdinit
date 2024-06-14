@@ -11,9 +11,13 @@ def fit_fn(x, C, E):
     T = 160
     return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
+def m_eff(data, tPos, tSpan):
+    """calculate effective mass using time tPos and time range tSpan"""
+    return 1/tSpan * np.arccosh( (data[tPos+tSpan] + data[tPos-tSpan]) / (2*data[tPos]) )
+
 def stability_plot(tau, p2p, p2pErr):
     upper = 50
-    lowerValues = np.arange(8, 40)
+    lowerValues = np.arange(30, 40)
     nFitIntervals = len(lowerValues)
     EArr, EErrArr = np.zeros(nFitIntervals), np.zeros(nFitIntervals)
     
@@ -37,24 +41,36 @@ def stability_plot(tau, p2p, p2pErr):
     ax.set_xlabel('lower boundary of fit')
     ax.set_ylabel('resulting $E_o$')
     ax.grid()
-    ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red', label='upper boundary = %i' % upper)
+    ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red', label='upper bound = %i' % upper)
+
+    # add effective mass to plot
+    tSpan = 5
+    mEff = m_eff(p2p, lowerValues, tSpan)
+    print(mEff)
+    #lowerValues = lowerValues[0:len(mEff)]
+    print(mEff.shape)
+    ax.plot(lowerValues, mEff, 'x', color = 'tab:blue', label=r'effective mass using $t=\mathrm{lower bound},\enspace\tau=%i$' % tSpan)
+    
     ax.legend()
-    fig.savefig('plot/stability.pdf')
-    print(EArr)
-    print(EErrArr)
+    fig.savefig('plot/stability.pdf', **figArgs)
 
 
 doBinErrorPlot = False
-doStabilityPlot = False
+doStabilityPlot = True
 initialGuess = (1.5, 0.1)
 nStraps = 1000
+figArgs = {'bbox_inches':'tight'}
 
 
 # data importing
 print('- load data')
 rawFilename = 'data/pion.local-local.u-gf-d-gi.px0_py0_pz0.h5'
 arrFilename = 'data/confs.npy'
-confs = load_mean_data(rawFilename, arrFilename, False).real
+confs = load_mean_data(rawFilename, arrFilename, True).real
+
+# export data for comparison
+np.savetxt('data/confs_export.txt', confs.flatten())
+
 halfIndex = int(np.floor(confs.shape[1]/2))
 confs = confs[:, :halfIndex]
 ## the two halves of a configuration are redundant so mean over them
@@ -78,7 +94,6 @@ confs = bin_mean(confs, binsize)
 p2p = np.mean(confs, 0) # final values for pion-pion 2pt-function
 p2pErr = expectation_error_estimate(confs, 0)
 tau = np.arange(len(p2p))
-
 
 # stability depending on fit interval
 if doStabilityPlot:
@@ -151,8 +166,6 @@ for i in range(dataLen):
 
 ax.fill_between(xFit, yLower, yUpper, alpha=0.5, label='bootstrap range', color=rangeColor, zorder=6)
 ax.plot(xFit, yMean, label='bootstrap mean', color=rangeColor, zorder=4)
-print(yLower)
-print(yUpper)
 
 ax.legend()
 fig.savefig('plot/correlator.pdf')
