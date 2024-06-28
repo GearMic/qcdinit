@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import pandas as pd
+#import pandas as pd
 
 from qcdinit import *
 from montecarlo import *
@@ -27,11 +27,23 @@ def stability_plot(tau, p2p, p2pErr):
         tauSlice = tau[slice[0]:slice[1]]
         p2pSlice = p2p[slice[0]:slice[1]]
         p2pErrSlice = p2pErr[slice[0]:slice[1]]
+        p2pCovSlice = p2pCov[slice[0]:slice[1], slice[0]:slice[1]]
     
-        params, paramsErr, _, _, _ = fit_bootstrap(
+        # params, paramsErr, _, _, _ = fit_bootstrap(
+        #     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
+        #     yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
+        # )
+
+        # params, paramsErr, _, _, _ = fit_bootstrap(
+        #     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
+        #     yErr=np.diag(p2pCovSlice), paramRange=((np.NINF, np.inf), (0, np.inf))
+        # )
+
+        params, paramsErr, _, _, _ = fit_bootstrap_correlated(
             fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-            yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
+            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
         )
+
         EArr[i] = params[1]
         EErrArr[i] = paramsErr[1]
     
@@ -66,15 +78,15 @@ figArgs = {'bbox_inches':'tight'}
 print('- load data')
 rawFilename = 'data/pion.local-local.u-gf-d-gi.px0_py0_pz0.h5'
 arrFilename = 'data/confs.npy'
-confs = load_mean_data(rawFilename, arrFilename, True).real
+confs = load_mean_data(rawFilename, arrFilename, False).real
 
 # export data for comparison
 np.savetxt('data/confs_export.txt', confs.flatten())
 
 halfIndex = int(np.floor(confs.shape[1]/2))
 confs = confs[:, :halfIndex]
-## the two halves of a configuration are redundant so mean over them
-#confs = (confs[:, :halfIndex] + confs[:, -halfIndex:]) / 2 # TODO: not working properly
+## TODO TODO: the two halves of a configuration are redundant so mean over them
+#confs = (confs[:, :halfIndex] + confs[:, -halfIndex:]) / 2 # 
 
 
 # bin error plot
@@ -92,6 +104,9 @@ print('- prepare data')
 binsize = 1 # visually determined from error plot
 confs = bin_mean(confs, binsize)
 p2p = np.mean(confs, 0) # final values for pion-pion 2pt-function
+p2pErr = np.std(confs, 0, ddof=1)
+p2pCov = np.cov(confs.T, ddof=1)
+print(p2pCov.shape)
 p2pErr = expectation_error_estimate(confs, 0)
 tau = np.arange(len(p2p))
 
@@ -135,15 +150,15 @@ Cerr, Eerr = paramsErr
 hbarc = 197.32698
 mIdeal = 0.06821 * 139.57039 / hbarc
 print('pion mass ideal: ', mIdeal)
-resultsFrame = pd.DataFrame({
-    '$X=$': ('C', 'E'),
-    '$X$': params,
-    r'$\delta X$': paramsErr,
-    r'$\overline X_B$': paramsBootMean,
-    r'$\chi^2/\mathrm{dof}$': (chisq / (dataLen-2), '')
-})
-print("results:\n", resultsFrame)
-resultsFrame.to_latex('latex/example_results.tex')
+# resultsFrame = pd.DataFrame({
+#     '$X=$': ('C', 'E'),
+#     '$X$': params,
+#     r'$\delta X$': paramsErr,
+#     r'$\overline X_B$': paramsBootMean,
+#     r'$\chi^2/\mathrm{dof}$': (chisq / (dataLen-2), '')
+# })
+# print("results:\n", resultsFrame)
+# resultsFrame.to_latex('latex/example_results.tex')
 
 # add fit line to plot
 xFit = tauSlice

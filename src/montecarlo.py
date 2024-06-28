@@ -142,6 +142,7 @@ def expectation_error_estimate(obs: np.ndarray, axis: int):
     """
     implements (34) from Statistik I along axis.
     TODO: test for axis!=0
+    NOTE: use np.std(..., ddof=1) instead
     """
     obs = obs.swapaxes(0, axis)
     N = len(obs)
@@ -300,4 +301,54 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
 
     return popt, paramsErr, chisq, paramsBootMean, paramsArr
 
+
+def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRange=None):
+    """
+    returns fit parameters and their errors.
+    Errors are calculated using bootstrapping with a correlated fit using the covariance matrix cov.
+    paramRange: optional array of arrays, the individual arrays contain limits for the parameters.
+    If a parameter is not in the range, the configuration is regenerated until it is.
+    TODO: fix the wrong parameter problem for the normal fit, not just for bootstrapping
+    """
+
+    # individual fit for parameter values
+    popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True)
+    chisq = np.sum(infodict['fvec']**2)
+    nParams = len(popt)
+    dataLen = len(x)
+
+    # bootstrapping for parameter errors
+    paramsErr, paramsBootMean = (), 0
+    paramsArr = np.zeros((nStraps, nParams))
+
+    for i in range(nStraps):
+        success = False
+        while not success:
+            # randomly sample from data and fit to that sample
+            rng = np.random.default_rng()
+            sampleIndex = rng.choice(dataLen, dataLen, replace=True)
+
+            xSample = x[sampleIndex]
+            ySample = y[sampleIndex]
+            yCovSample = yCov[sampleIndex, sampleIndex]
+
+            paramsBoot, _ = optimize.curve_fit(
+                fit_fn, xSample, ySample, initialGuess, yCovSample)
+            paramsBoot = np.array(paramsBoot)
+
+            # ensure that parameters are in the expected range
+            success = True
+            if not (paramRange is None):
+                for param, prange in zip(paramsBoot, paramRange):
+                    isInRange = param >= prange[0] and param <= prange[1]
+                    success = success and isInRange # only update success if hasn't previously failed
+            
+            # add strap params to array
+            paramsArr[i] = paramsBoot
+    
+    # error and bootstrap mean
+    paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
+    paramsBootMean = np.sum(paramsArr, 0) / nStraps
+
+    return popt, paramsErr, chisq, paramsBootMean, paramsArr
 
