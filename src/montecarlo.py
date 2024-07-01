@@ -248,11 +248,7 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
 
     # individual fit for parameter values
     popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr, full_output=True)
-    #chisq = np.sum(infodict['fvec']**2)
-    # also see this https://stackoverflow.com/questions/52591979/how-to-obtain-the-chi-squared-value-as-an-output-of-scipy-optimize-curve-fit
-    # chisq = np.sum( ( (y-fit_fn(x, *params)) / yErr )**2 )
-    r = y - fit_fn(x, *popt)
-    chisq = sum((r / yErr) ** 2)
+    chisq = np.sum(infodict['fvec']**2)
     nParams = len(popt)
 
     # prepare data arrays
@@ -280,12 +276,6 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
                 fit_fn, xSample, ySample, initialGuess, yErrSample)
             paramsBoot = np.array(paramsBoot)
 
-            # check if params are in the given range
-            # success = True
-            # if not (paramRange is None):
-            #     for param, prange in zip(paramsBoot, paramRange):
-            #         if not (param >= prange[0] and param <= prange[1]):
-            #             success = False
             success = True
             if not (paramRange is None):
                 for param, prange in zip(paramsBoot, paramRange):
@@ -302,20 +292,16 @@ def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=Non
     return popt, paramsErr, chisq, paramsBootMean, paramsArr
 
 
-def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRange=None):
+def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRange=None, maxfev=600):
     """
     returns fit parameters and their errors.
-    Errors are calculated using bootstrapping with a correlated fit using the covariance matrix cov.
-    paramRange: optional array of arrays, the individual arrays contain limits for the parameters.
-    If a parameter is not in the range, the configuration is regenerated until it is.
+    Errors are calculated using bootstrapping with a correlated fit using the covariance matrix yCov.
+    nStraps: amount of samples used for bootstrapping
+    paramRange: optional array of arrays, the individual arrays containing limits for the parameters.
+    If a parameter is not in the specified range, the configuration is regenerated until it is.
     TODO: fix the wrong parameter problem for the normal fit, not just for bootstrapping
     TODO: use bounds parameter of curve_fit
     """
-    #kwargs = {'maxfev': 2000}
-    maxfev = 100000
-    #yCovInv = np.linalg.inv(yCov)
-    #print(yCov@yCovInv)
-    #print(1/np.diag(yCov))
 
     # individual fit for parameter values
     popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)

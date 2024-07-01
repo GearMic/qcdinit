@@ -30,20 +30,10 @@ def stability_plot(tau, p2p, p2pErr):
         p2pErrSlice = p2pErr[slice[0]:slice[1]]
         p2pCovSlice = p2pCov[slice[0]:slice[1], slice[0]:slice[1]]
     
-        # params, paramsErr, _, _, _ = fit_bootstrap(
-        #     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-        #     yErr=p2pErrSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
-        # )
-
-        # params, paramsErr, _, _, _ = fit_bootstrap(
-        #     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-        #     yErr=np.diag(p2pCovSlice), paramRange=((np.NINF, np.inf), (0, np.inf))
-        # )
-
         params, paramsErr, _, _, _ = fit_bootstrap_correlated(
             fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
-        )
+            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf)), maxfev=100000
+        ) # TODO: find out why maxfev has to be so high
 
         EArr[i] = params[1]
         EErrArr[i] = paramsErr[1]
@@ -141,14 +131,10 @@ p2pSlice = p2p[slice[0]:slice[1]]
 p2pErrSlice = p2pErr[slice[0]:slice[1]]
 p2pCovSlice = p2pCov[slice[0]:slice[1], slice[0]:slice[1]]
 
-#params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap(
-#    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pErrSlice, None)
 params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap_correlated(
     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pCovSlice, None)
 C, E = params
 Cerr, Eerr = paramsErr
-#prerr(C, Cerr, 'C')
-#prerr(E, Eerr, 'E (pion mass)')
 
 # print / export results
 hbarc = 197.32698
