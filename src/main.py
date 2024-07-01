@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-#import pandas as pd
+import pandas as pd
+import scipy as sp
 
 from qcdinit import *
 from montecarlo import *
@@ -68,7 +69,7 @@ def stability_plot(tau, p2p, p2pErr):
 
 
 doBinErrorPlot = False
-doStabilityPlot = True
+doStabilityPlot = False
 initialGuess = (1.5, 0.1)
 nStraps = 1000
 figArgs = {'bbox_inches':'tight'}
@@ -138,9 +139,12 @@ dataLen = slice[1]-slice[0]
 tauSlice = tau[slice[0]:slice[1]]
 p2pSlice = p2p[slice[0]:slice[1]]
 p2pErrSlice = p2pErr[slice[0]:slice[1]]
+p2pCovSlice = p2pCov[slice[0]:slice[1], slice[0]:slice[1]]
 
-params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap(
-    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pErrSlice, None)
+#params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap(
+#    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pErrSlice, None)
+params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap_correlated(
+    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pCovSlice, None)
 C, E = params
 Cerr, Eerr = paramsErr
 #prerr(C, Cerr, 'C')
@@ -150,15 +154,15 @@ Cerr, Eerr = paramsErr
 hbarc = 197.32698
 mIdeal = 0.06821 * 139.57039 / hbarc
 print('pion mass ideal: ', mIdeal)
-# resultsFrame = pd.DataFrame({
-#     '$X=$': ('C', 'E'),
-#     '$X$': params,
-#     r'$\delta X$': paramsErr,
-#     r'$\overline X_B$': paramsBootMean,
-#     r'$\chi^2/\mathrm{dof}$': (chisq / (dataLen-2), '')
-# })
-# print("results:\n", resultsFrame)
-# resultsFrame.to_latex('latex/example_results.tex')
+resultsFrame = pd.DataFrame({
+    '$X=$': ('C', 'E'),
+    '$X$': params,
+    r'$\delta X$': paramsErr,
+    r'$\overline X_B$': paramsBootMean,
+    r'$\chi^2/\mathrm{dof}$': (chisq / (dataLen-2), '')
+})
+print("results:\n", resultsFrame)
+resultsFrame.to_latex('latex/example_results.tex')
 
 # add fit line to plot
 xFit = tauSlice

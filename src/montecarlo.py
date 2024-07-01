@@ -309,10 +309,16 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
     paramRange: optional array of arrays, the individual arrays contain limits for the parameters.
     If a parameter is not in the range, the configuration is regenerated until it is.
     TODO: fix the wrong parameter problem for the normal fit, not just for bootstrapping
+    TODO: use bounds parameter of curve_fit
     """
+    #kwargs = {'maxfev': 2000}
+    maxfev = 100000
+    #yCovInv = np.linalg.inv(yCov)
+    #print(yCov@yCovInv)
+    #print(1/np.diag(yCov))
 
     # individual fit for parameter values
-    popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True)
+    popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)
     chisq = np.sum(infodict['fvec']**2)
     nParams = len(popt)
     dataLen = len(x)
@@ -333,7 +339,7 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
             yCovSample = yCov[sampleIndex, sampleIndex]
 
             paramsBoot, _ = optimize.curve_fit(
-                fit_fn, xSample, ySample, initialGuess, yCovSample)
+                fit_fn, xSample, ySample, initialGuess, yCovSample, absolute_sigma=True, maxfev=maxfev)
             paramsBoot = np.array(paramsBoot)
 
             # ensure that parameters are in the expected range
