@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.optimize as optimize
+import scipy as sp
 
 
 def fullprint0(*args, **kwargs):
@@ -305,9 +306,12 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
 
     # individual fit for parameter values
     popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)
-    chisq = np.sum(infodict['fvec']**2)
     nParams = len(popt)
     dataLen = len(x)
+
+    # calculate chisq
+    r = y - fit_fn(x, *popt)
+    chisq = r.T @ sp.linalg.inv(yCov) @ r # TODO: invert using singular value decomposition
 
     # bootstrapping for parameter errors
     paramsErr, paramsBootMean = (), 0
@@ -341,6 +345,8 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
     # error and bootstrap mean
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
     paramsBootMean = np.sum(paramsArr, 0) / nStraps
+
+    print(popt[1], paramsBootMean[1], paramsErr[1], infodict['nfev'])
 
     return popt, paramsErr, chisq, paramsBootMean, paramsArr
 

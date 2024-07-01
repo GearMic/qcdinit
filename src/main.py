@@ -16,7 +16,7 @@ def m_eff(data, tPos, tSpan):
     """calculate effective mass using time tPos and time range tSpan"""
     return 1/tSpan * np.arccosh( (data[tPos+tSpan] + data[tPos-tSpan]) / (2*data[tPos]) )
 
-def stability_plot(tau, p2p, p2pErr):
+def stability_plot(tau, p2p, p2pCov):
     upper = 50
     lowerValues = np.arange(30, 40)
     nFitIntervals = len(lowerValues)
@@ -24,15 +24,15 @@ def stability_plot(tau, p2p, p2pErr):
     
     for i in range(nFitIntervals):
         slice = (lowerValues[i], upper)
+        print(slice)
     
         tauSlice = tau[slice[0]:slice[1]]
         p2pSlice = p2p[slice[0]:slice[1]]
-        p2pErrSlice = p2pErr[slice[0]:slice[1]]
         p2pCovSlice = p2pCov[slice[0]:slice[1], slice[0]:slice[1]]
     
         params, paramsErr, _, _, _ = fit_bootstrap_correlated(
             fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf)), maxfev=100000
+            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf)), maxfev=20000
         ) # TODO: find out why maxfev has to be so high
 
         EArr[i] = params[1]
@@ -45,13 +45,11 @@ def stability_plot(tau, p2p, p2pErr):
     ax.set_ylabel('resulting $E_o$')
     ax.grid()
     ax.errorbar(lowerValues, EArr, EErrArr, fmt='x', color='tab:red', label='upper bound = %i' % upper)
+    print(EArr)
 
     # add effective mass to plot
     tSpan = 5
     mEff = m_eff(p2p, lowerValues, tSpan)
-    print(mEff)
-    #lowerValues = lowerValues[0:len(mEff)]
-    print(mEff.shape)
     ax.plot(lowerValues, mEff, 'x', color = 'tab:blue', label=r'effective mass using $t=\mathrm{lower bound},\enspace\tau=%i$' % tSpan)
     
     ax.legend()
@@ -95,21 +93,22 @@ print('- prepare data')
 binsize = 1 # visually determined from error plot
 confs = bin_mean(confs, binsize)
 p2p = np.mean(confs, 0) # final values for pion-pion 2pt-function
-p2pErr = np.std(confs, 0, ddof=1)
+#p2pErr = np.std(confs, 0, ddof=1)
 p2pCov = np.cov(confs.T, ddof=1)
 print(p2pCov.shape)
-p2pErr = expectation_error_estimate(confs, 0)
 tau = np.arange(len(p2p))
 
 # stability depending on fit interval
 if doStabilityPlot:
     print('- stability')
-    stability_plot(tau, p2p, p2pErr)
+    stability_plot(tau, p2p, p2pCov)
 
 
 # plot
 print('-- plot')
-slice = (30, 50) # boundaries determined visually (from stability plot)
+#slice = (32, 50) # boundaries determined visually (from stability plot)
+sliceA, sliceB = 32, 50
+slicer = slice(sliceA, sliceB)
 
 fig, ax = plt.subplots()
 ax.set_title('Correlator and fit in range %s' % str(slice))
@@ -120,19 +119,21 @@ ax.grid()
 ax.set_yscale('log')
 ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
-ax.errorbar(tau, -p2p, p2pErr, fmt='.', color='xkcd:red', label='Data', zorder=2)
+ax.errorbar(tau, -p2p, np.diag(p2pCov), fmt='.', color='xkcd:red', label='Data', zorder=2)
 
 
 # fit to find pion mass
 print('-- fit')
-dataLen = slice[1]-slice[0]
-tauSlice = tau[slice[0]:slice[1]]
-p2pSlice = p2p[slice[0]:slice[1]]
-p2pErrSlice = p2pErr[slice[0]:slice[1]]
-p2pCovSlice = p2pCov[slice[0]:slice[1], slice[0]:slice[1]]
+dataLen = (sliceB-sliceA)
+tauSlice = tau[slicer]
+p2pSlice = p2p[slicer]
+#p2pCov = p2pCov/np.sqrt(172)
+#p2pCov = np.diag(np.diag(p2pCov))
+p2pCovSlice = p2pCov[slicer, slicer]
+print(tauSlice, p2pSlice)
 
 params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap_correlated(
-    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pCovSlice, None)
+    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pCovSlice, None, maxfev=20000)
 C, E = params
 Cerr, Eerr = paramsErr
 
@@ -155,6 +156,7 @@ xFit = tauSlice
 yFit = fit_fn(xFit, C, E)
 
 ax.plot(xFit, -yFit, color='blue', label='Fit', zorder=5)
+print(chisq/dataLen)
 
 # add bootstrap range to plot
 print('-- bootstrap range plot')
@@ -169,8 +171,8 @@ for i in range(dataLen):
     yRange = fit_fn(t, Cvalues, Evalues)
     yLower[i], yUpper[i], yMean[i] = yRange.min(), yRange.max(), yRange.mean()
 
-ax.fill_between(xFit, yLower, yUpper, alpha=0.5, label='bootstrap range', color=rangeColor, zorder=6)
-ax.plot(xFit, yMean, label='bootstrap mean', color=rangeColor, zorder=4)
+#ax.fill_between(xFit, yLower, yUpper, alpha=0.5, label='bootstrap range', color=rangeColor, zorder=6)
+#ax.plot(xFit, yMean, label='bootstrap mean', color=rangeColor, zorder=4)
 
 ax.legend()
 fig.savefig('plot/correlator.pdf')
