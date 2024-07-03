@@ -3,15 +3,6 @@ import scipy.optimize as optimize
 import scipy as sp
 
 
-def fullprint0(*args, **kwargs):
-    """https://stackoverflow.com/questions/1987694/how-do-i-print-the-full-numpy-array-without-truncation/24542498#24542498"""
-    from pprint import pprint
-    import sys
-    opt = np.get_printoptions()
-    np.set_printoptions(threshold=sys.maxsize)
-    pprint(*args, **kwargs)
-    np.set_printoptions(**opt)
-
 def fullprint(*args, **kwargs):
     """https://stackoverflow.com/questions/1987694/how-do-i-print-the-full-numpy-array-without-truncation/24542498#24542498"""
     import sys
@@ -60,21 +51,6 @@ def autocorrelation_estimator(obs: np.ndarray, t: int, obs_mean: np.ndarray = No
         obs_correlations = obs_correlations[:, :-t]
 
     return np.squeeze(np.mean(obs_correlations, 1))
-
-def autocorrelation_range_mean(obs: np.ndarray, N: int, obs_mean: np.ndarray = None, periodic: bool = False):
-    """
-    DEPRECATED
-    calculate autocorrelation for t-values up to N.
-    if obs is 2d, then the mean of the correlations is taken for each t.
-    """
-
-    trange = range(N)
-
-    corr = np.zeros(N)
-    for t in trange:
-        corr[t] = np.mean(autocorrelation_estimator(obs, t, obs_mean, periodic))
-
-    return np.array(trange), corr
 
 def autocorrelation_range(obs: np.ndarray, N: int, obs_mean: np.ndarray = None, periodic: bool = False):
     """
@@ -143,7 +119,7 @@ def expectation_error_estimate(obs: np.ndarray, axis: int):
     """
     implements (34) from Statistik I along axis.
     TODO: test for axis!=0
-    NOTE: use np.std(..., ddof=1) instead
+    NOTE: simplify this function using np.std(..., ddof=1)
     """
     obs = obs.swapaxes(0, axis)
     N = len(obs)
@@ -191,50 +167,6 @@ def bin_error_plot(data, fig, ax, label=None, max_binsize=100, filename=None, dp
 
     if not (filename is None):
         fig.savefig(filename, dpi=dpi)
-
-
-def cosh_fit_bootstrap(x, y, initialGuess, nStraps, yErr=None, sliceLen=None):
-    """
-    specific cosh fit.
-    returns a, b, a_err, b_err. Errors calculated using bootstrapping.
-    if yErr is None, yErr is initialized to an array of ones.
-    """
-
-    def fit_fn(x, C, E):
-        T = 160
-        return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
-
-    # prepare data arrays
-    dataLen = len(x)
-    if yErr is None:
-        yErr = np.ones(dataLen)
-    if sliceLen is None:
-        sliceLen = len(x)
-    x = x[:sliceLen]
-    y = y[:sliceLen]
-    yErr = yErr[:sliceLen]
-    iRange = range(dataLen)
-
-    # individual fit for parameter values
-    popt, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yErr)
-    a, b = popt
-
-    # bootstrapping for parameter errors
-    aArr, bArr = np.zeros(nStraps), np.zeros(nStraps)
-    for i in range(nStraps):
-        sampleIndex = np.random.choice(iRange, dataLen)
-        xSample = x[sampleIndex]
-        ySample = y[sampleIndex]
-        yErrSample = yErr[sampleIndex]
-
-        poptBoot, _ = optimize.curve_fit(
-            fit_fn, xSample, ySample, initialGuess, yErrSample)
-        aArr[i], bArr[i] = poptBoot
-
-    aErr = np.std(aArr, ddof=1)
-    bErr = np.std(bArr, ddof=1)
-
-    return a, b, aErr, bErr
 
 
 def fit_bootstrap(fit_fn, x, y, initialGuess, nStraps, yErr=None, paramRange=None):
@@ -345,8 +277,6 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
     # error and bootstrap mean
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
     paramsBootMean = np.sum(paramsArr, 0) / nStraps
-
-    print(popt[1], paramsBootMean[1], paramsErr[1], infodict['nfev'])
 
     return popt, paramsErr, chisq, paramsBootMean, paramsArr
 

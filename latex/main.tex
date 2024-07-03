@@ -23,17 +23,36 @@
 \usepackage{booktabs}
 \usepackage{atbegshi}% http://ctan.org/pkg/atbegshi
 
-\AtBeginDocument{\AtBeginShipoutNext{\AtBeginShipoutDiscard}} % remove empty page
-\addtocounter{page}{-1}
+%\AtBeginDocument{\AtBeginShipoutNext{\AtBeginShipoutDiscard}} % remove empty page
+%\addtocounter{page}{-1}
 
 \begin{document}
 
+
+\begin{Figure}
+    \includegraphics[width=1.0\textwidth, angle=0]{stability.pdf}
+\caption{
+    Stabilität in Abhängigkeit der Unteren Grenze des Fit-Intervalls
+    und Vergleich mit der effektiven Masse.
+}
+\label{fig:stability}
+\end{Figure}
+
+\begin{Figure}
+    \includegraphics[width=1.0\textwidth, angle=0]{correlator.pdf}
+\caption{
+    Pion-Pion-Korrelator (gemittelt über die verschiedenen Konfigurationen) in Abhängigkeit der Zeit,
+    mit Fit zur Bestimmung der Pion-Masse.
+}
+\label{fig:correlation}
+\end{Figure}
+
 \begin{center}
     \include{example_results}
+    \caption{
+        Fit-Parameter. $\delta X$: Fehler, berechnet mit Bootstrapping. $\overline X_B$: Bootstrap-Mittelwert.
+    }
+    \label{tab:results}
 \end{center}
-
-    \includegraphics[width=1.0\textwidth, angle=0]{stability.pdf}
-
-    \includegraphics[width=1.0\textwidth, angle=0]{correlator.pdf}
 
 \end{document}
