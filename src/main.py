@@ -60,7 +60,7 @@ def stability_plot(tau, p2p, p2pCov):
 
 
 doBinErrorPlot = False
-doStabilityPlot = False
+doStabilityPlot = True
 initialGuess = (0.01, 0.01)
 nStraps = 1000
 figArgs = {'bbox_inches':'tight'}
