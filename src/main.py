@@ -7,16 +7,13 @@ from qcdinit import *
 from helpers import *
 
 
-def fit_fn(x, C, E):
-    T = 160
-    return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
-
 #def fit_fn(x, C, E):
 #    T = 160
-#    return C * np.cosh(E * (T/2 - x))
+#    return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
-#def fit_fn(x, *args):
-#    return args[0] * np.cosh(-args[1] * (x-80))
+def fit_fn(x, C, E):
+    T = 160
+    return C * np.cosh(E * (T/2 - x))
 
 def m_eff(data, tPos, tSpan):
     """calculate effective mass using time tPos and time range tSpan"""
@@ -39,10 +36,6 @@ def stability_plot(tau, p2p, p2pCov):
             fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
             yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf)), maxfev=maxfev
         )
-        #params, paramsErr, _, _, _ = fit_bootstrap_correlated(
-        #    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-        #    yCov=p2pCovSlice, maxfev=maxfev
-        #)
 
         EArr[i] = params[1]
         EErrArr[i] = paramsErr[1]
@@ -68,10 +61,7 @@ def stability_plot(tau, p2p, p2pCov):
 
 doBinErrorPlot = False
 doStabilityPlot = False
-initialGuess = (0.003, 0.04)
-#initialGuess = (3.38e-3, 0.047)
-#initialGuess = [1, -0.047]
-initialGuess = (1, 0.01)
+initialGuess = (0.01, 0.01)
 nStraps = 1000
 figArgs = {'bbox_inches':'tight'}
 maxfev = 600
@@ -102,7 +92,6 @@ if doBinErrorPlot:
         bin_error_plot(obs, fig, ax, "$t=%i$" % i, 10)
     fig.savefig('plot/bin_error.pdf')
 
-
 # prepare data
 print('- prepare data')
 binsize = 1 # visually determined from error plot
@@ -112,19 +101,11 @@ p2pCov = np.cov(confs.T, ddof=1) / confs.shape[0]
 p2pErr = np.std(confs, 0) / np.sqrt(confs.shape[0])
 tau = np.arange(len(p2p))
 
-print(p2p)
-print('-----')
-print(p2pErr)
-print('-----')
-print(p2p.shape)
-print(confs.shape)
-
-# import comparison data
-compData = np.genfromtxt('data/CorrelationFunctionAngelo.csv', delimiter=',')
-p2pCov = np.genfromtxt('data/covarianzmatrixAngelo.csv', delimiter=',')
-tau = compData[:, 0]
-p2p = compData[:, 1]
-
+## import comparison data
+#compData = np.genfromtxt('data/CorrelationFunctionAngelo.csv', delimiter=',')
+#p2pCov = np.genfromtxt('data/covarianzmatrixAngelo.csv', delimiter=',')
+#tau = compData[:, 0]
+#p2p = compData[:, 1]
 
 # stability depending on fit interval
 if doStabilityPlot:
@@ -134,9 +115,9 @@ if doStabilityPlot:
 
 # plot
 print('-- plot')
-sliceA, sliceB = 16, 64
+#sliceA, sliceB = 16, 64
+#sliceA, sliceB = 0, 48
 sliceA, sliceB = 30, 50
-sliceA, sliceB = 0, 48
 slicer = slice(sliceA, sliceB)
 
 fig, ax = plt.subplots()
@@ -158,13 +139,6 @@ dataLen = (sliceB-sliceA)
 tauSlice = tau[slicer]
 p2pSlice = p2p[slicer]
 p2pCovSlice = p2pCov[slicer, slicer]
-
-print('-----')
-fullprint(p2pSlice)
-print('-----')
-fullprint(p2pCovSlice[:4, :])
-print('-----')
-print(p2pSlice.shape)
 
 # fit using bootstrapping
 params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap_correlated(

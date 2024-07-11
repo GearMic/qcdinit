@@ -233,7 +233,7 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
     paramRange: optional array of arrays, the individual arrays containing limits for the parameters.
     If a parameter is not in the specified range, the configuration is regenerated until it is.
     TODO: fix the wrong parameter problem for the normal fit, not just for bootstrapping
-    TODO: use bounds parameter of curve_fit
+    TODO: use bounds parameter of curve_fit instead of paramRange
     """
 
     # individual fit for parameter values
