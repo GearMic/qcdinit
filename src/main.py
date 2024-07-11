@@ -11,6 +11,13 @@ def fit_fn(x, C, E):
     T = 160
     return C*(np.exp(-E * x) + np.exp(-(T - x) * E))
 
+#def fit_fn(x, C, E):
+#    T = 160
+#    return C * np.cosh(E * (T/2 - x))
+
+#def fit_fn(x, *args):
+#    return args[0] * np.cosh(-args[1] * (x-80))
+
 def m_eff(data, tPos, tSpan):
     """calculate effective mass using time tPos and time range tSpan"""
     return 1/tSpan * np.arccosh( (data[tPos+tSpan] + data[tPos-tSpan]) / (2*data[tPos]) )
@@ -30,8 +37,12 @@ def stability_plot(tau, p2p, p2pCov):
     
         params, paramsErr, _, _, _ = fit_bootstrap_correlated(
             fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
-            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf))
+            yCov=p2pCovSlice, paramRange=((np.NINF, np.inf), (0, np.inf)), maxfev=maxfev
         )
+        #params, paramsErr, _, _, _ = fit_bootstrap_correlated(
+        #    fit_fn, tauSlice, p2pSlice, initialGuess, nStraps,
+        #    yCov=p2pCovSlice, maxfev=maxfev
+        #)
 
         EArr[i] = params[1]
         EErrArr[i] = paramsErr[1]
@@ -56,10 +67,14 @@ def stability_plot(tau, p2p, p2pCov):
 
 
 doBinErrorPlot = False
-doStabilityPlot = True
+doStabilityPlot = False
+initialGuess = (0.003, 0.04)
+#initialGuess = (3.38e-3, 0.047)
+#initialGuess = [1, -0.047]
 initialGuess = (1, 0.01)
 nStraps = 1000
 figArgs = {'bbox_inches':'tight'}
+maxfev = 600
 
 
 # data importing
@@ -72,9 +87,10 @@ confs = -load_mean_data(rawFilename, arrFilename, False).real
 np.savetxt('data/confs_export.txt', confs.flatten())
 
 halfIndex = int(np.floor(confs.shape[1]/2))
+#confs = confs[:, :halfIndex]
+# the two halves of a configuration are redundant so mean over them
+confs = (confs + np.flip(np.roll(confs, -1, 1), 1) ) / 2
 confs = confs[:, :halfIndex]
-## TODO TODO: the two halves of a configuration are redundant so mean over them
-#confs = (confs[:, :halfIndex] + confs[:, -halfIndex:]) / 2 # 
 
 
 # bin error plot
@@ -92,8 +108,23 @@ print('- prepare data')
 binsize = 1 # visually determined from error plot
 confs = bin_mean(confs, binsize)
 p2p = np.mean(confs, 0) # final values for pion-pion 2pt-function
-p2pCov = np.cov(confs.T, ddof=1) / np.sqrt(confs.shape[0])
+p2pCov = np.cov(confs.T, ddof=1) / confs.shape[0]
+p2pErr = np.std(confs, 0) / np.sqrt(confs.shape[0])
 tau = np.arange(len(p2p))
+
+print(p2p)
+print('-----')
+print(p2pErr)
+print('-----')
+print(p2p.shape)
+print(confs.shape)
+
+# import comparison data
+compData = np.genfromtxt('data/CorrelationFunctionAngelo.csv', delimiter=',')
+p2pCov = np.genfromtxt('data/covarianzmatrixAngelo.csv', delimiter=',')
+tau = compData[:, 0]
+p2p = compData[:, 1]
+
 
 # stability depending on fit interval
 if doStabilityPlot:
@@ -103,7 +134,9 @@ if doStabilityPlot:
 
 # plot
 print('-- plot')
+sliceA, sliceB = 16, 64
 sliceA, sliceB = 30, 50
+sliceA, sliceB = 0, 48
 slicer = slice(sliceA, sliceB)
 
 fig, ax = plt.subplots()
@@ -126,6 +159,13 @@ tauSlice = tau[slicer]
 p2pSlice = p2p[slicer]
 p2pCovSlice = p2pCov[slicer, slicer]
 
+print('-----')
+fullprint(p2pSlice)
+print('-----')
+fullprint(p2pCovSlice[:4, :])
+print('-----')
+print(p2pSlice.shape)
+
 # fit using bootstrapping
 params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap_correlated(
     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pCovSlice, None, maxfev=20000)
@@ -145,13 +185,16 @@ resultsFrame = pd.DataFrame({
 })
 print("results:\n", resultsFrame)
 resultsFrame.to_latex('latex/example_results.tex', index=False)
+print('chisq/dof:', chisq/(dataLen-2))
 
 # add fit line to plot
 xFit = tauSlice
 yFit = fit_fn(xFit, C, E)
-
 ax.plot(xFit, yFit, color='blue', label='Fit', zorder=5)
-print('chisq/dof:', chisq/(dataLen-2))
+
+xFit2 = tauSlice
+yFit2 = fit_fn(xFit, 0.003387, 0.04735)
+ax.plot(xFit2, yFit2, color='blue', label='Fit', zorder=5)
 
 # add bootstrap range to plot
 print('-- bootstrap range plot')
