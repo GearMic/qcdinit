@@ -19,6 +19,17 @@ def m_eff(data, tPos, tSpan):
     """calculate effective mass using time tPos and time range tSpan"""
     return 1/tSpan * np.arccosh( (data[tPos+tSpan] + data[tPos-tSpan]) / (2*data[tPos]) )
 
+def cosh_fit(x, y, yCov, initialGuess, bounds=(-np.inf, np.inf), maxfev=600):
+    # individual fit for parameter values
+    popt, pcov, _, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, bounds=bounds, maxfev=maxfev)
+
+    # calculate chisq
+    r = y - fit_fn(x, *popt)
+    chisq = r.T @ sp.linalg.pinv(yCov) @ r # TODO: invert using singular value decomposition
+
+    return popt, np.diag(pcov), chisq
+
+
 def stability_plot(tau, p2p, p2pCov):
     upper = 50
     lowerValues = np.arange(30, 40)
@@ -57,6 +68,52 @@ def stability_plot(tau, p2p, p2pCov):
     order = [0, 1]
     ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='lower left')
     fig.savefig('plot/stability.pdf', **figArgs)
+
+def fit_meff_bootstrap(x, y, yCov, nStraps, fit_fn, initialGuess, mefftSpan, paramRange=None, maxfev=600):
+    # individual fit for parameter values
+    popt, pcov, _, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)
+    nParams = len(popt)
+    dataLen = len(x)
+    mEff = m_eff(y, 0, mefftSpan)
+
+    # calculate chisq
+    r = y - fit_fn(x, *popt)
+    chisq = r.T @ sp.linalg.inv(yCov) @ r # TODO: invert using singular value decomposition
+
+    # bootstrapping for parameter errors
+    paramsErr, paramsBootMean = (), 0
+    paramsArr = np.zeros((nStraps, nParams))
+
+    for i in range(nStraps):
+        success = False
+        while not success:
+            # randomly sample from data and fit to that sample
+            rng = np.random.default_rng()
+            sampleIndex = rng.choice(dataLen, dataLen, replace=True)
+
+            xSample = x[sampleIndex]
+            ySample = y[sampleIndex]
+            yCovSample = yCov[sampleIndex, sampleIndex]
+
+            paramsBoot, _ = optimize.curve_fit(
+                fit_fn, xSample, ySample, initialGuess, yCovSample, absolute_sigma=True, maxfev=maxfev)
+            paramsBoot = np.array(paramsBoot)
+
+            # ensure that parameters are in the expected range
+            success = True
+            if not (paramRange is None):
+                for param, prange in zip(paramsBoot, paramRange):
+                    isInRange = param >= prange[0] and param <= prange[1]
+                    success = success and isInRange # only update success if hasn't previously failed
+            
+            # add strap params to array
+            paramsArr[i] = paramsBoot
+    
+    # error and bootstrap mean
+    paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
+    paramsBootMean = np.sum(paramsArr, 0) / nStraps
+
+    return popt, pcov, paramsErr, chisq, paramsBootMean, paramsArr, mEff, mEffErr
 
 
 doBinErrorPlot = False

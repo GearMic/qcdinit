@@ -237,7 +237,7 @@ def fit_bootstrap_correlated(fit_fn, x, y, initialGuess, nStraps, yCov, paramRan
     """
 
     # individual fit for parameter values
-    popt, _, infodict, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)
+    popt, _, _, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)
     nParams = len(popt)
     dataLen = len(x)
 
