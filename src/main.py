@@ -69,6 +69,7 @@ def stability_plot(tau, p2p, p2pCov):
     ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='lower left')
     fig.savefig('plot/stability.pdf', **figArgs)
 
+
 def fit_meff_bootstrap(x, y, yCov, nStraps, fit_fn, initialGuess, mefftSpan, paramRange=None, maxfev=600):
     # individual fit for parameter values
     popt, pcov, _, _, _ = optimize.curve_fit(fit_fn, x, y, initialGuess, yCov, full_output=True, absolute_sigma=True, maxfev=maxfev)
@@ -113,6 +114,7 @@ def fit_meff_bootstrap(x, y, yCov, nStraps, fit_fn, initialGuess, mefftSpan, par
     paramsErr = tuple(np.std(paramsArr, 0, ddof=1))
     paramsBootMean = np.sum(paramsArr, 0) / nStraps
 
+    mEffErr=0
     return popt, pcov, paramsErr, chisq, paramsBootMean, paramsArr, mEff, mEffErr
 
 
@@ -120,6 +122,7 @@ doBinErrorPlot = False
 doStabilityPlot = True
 initialGuess = (0.01, 0.01)
 nStraps = 1000
+nSamples = nStraps
 figArgs = {'bbox_inches':'tight'}
 maxfev = 600
 
@@ -153,9 +156,11 @@ if doBinErrorPlot:
 print('- prepare data')
 binsize = 1 # visually determined from error plot
 confs = bin_mean(confs, binsize)
+
+# analyze
+print('- analyze')
 p2p = np.mean(confs, 0) # final values for pion-pion 2pt-function
 p2pCov = np.cov(confs.T, ddof=1) / confs.shape[0]
-p2pErr = np.std(confs, 0) / np.sqrt(confs.shape[0])
 tau = np.arange(len(p2p))
 
 ## import comparison data
@@ -202,6 +207,23 @@ params, paramsErr, chisq, paramsBootMean, paramsArr = fit_bootstrap_correlated(
     fit_fn, tauSlice, p2pSlice, initialGuess, nStraps, p2pCovSlice, None, maxfev=20000)
 C, E = params
 Cerr, Eerr = paramsErr
+
+def fn_correlator_fit(data, slicer):
+    x = np.arange(len(p2p))
+    y = np.mean(confs, 0)
+    yCov = np.cov(confs.T, ddof=1) / confs.shape[0]
+
+    xSlice = x[slicer]
+    ySlice = y[slicer]
+    yCovSlice = yCov[slicer, slicer]
+
+    popt, pcov, chisq = cosh_fit(xSlice, ySlice, yCovSlice, initialGuess)
+
+    return np.array(popt + pcov + (chisq,))
+
+result, resultErr, resultBootMean, _ = bootstrap_function(fn_correlator_fit, confs, 0, (slicer,), nSamples)
+C, E, Cerr, Eerr, chisq = result
+CBootErr, EBootErr = resultErr[:2]
 
 # print / export results
 hbarc = 197.32698
