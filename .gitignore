@@ -3,3 +3,4 @@ data/*.aff
 */__pycache__/*
 *.json
 *.toml
+build

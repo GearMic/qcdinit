@@ -41,10 +41,10 @@ def correlator_time_value_err(data, slicer=None):
 
     return x, y, yCov
 
-def fn_correlator_fit(data, slicer):
+def fn_correlator_fit(data, slicer, bounds=(-np.inf, np.inf)):
     x, y, yCov = correlator_time_value_err(data, slicer)
 
-    popt, perr, chisq = cosh_fit(x, y, yCov, initialGuess)
+    popt, perr, chisq = cosh_fit(x, y, yCov, initialGuess, bounds)
 
     return np.array(tuple(popt) + tuple(perr) + (chisq,))
 
@@ -54,28 +54,28 @@ def fn_meff(data, tPos, tSpan):
     return m_eff(data, tPos, tSpan)
 
 def stability_plot(confs, plotMEff = True, tSpan=5):
-    upperValues = np.array((60, 80))
+    upperValues = np.array((40, 60, 80))
     maxUpper = np.max(upperValues)
     lowerLower = 10
     lowerDistance = 10
-    upperColors = ('tab:orange', 'tab:red')
+    upperColors = ('tab:purple', 'tab:orange', 'tab:red')
 
     fig, ax = plt.subplots()
     capsize = 3
 
     for j in range(len(upperValues)):
-        lowerValues = np.arange(lowerLower, lowerDistance)
-        nFitIntervals = len(lowerValues)
-        EArr, EErrArr = np.zeros(nFitIntervals), np.zeros(nFitIntervals)
-
         upper = upperValues[j]
         upperColor = upperColors[j]
+
+        lowerValues = np.arange(lowerLower, upper - lowerDistance)
+        nFitIntervals = len(lowerValues)
+        EArr, EErrArr = np.zeros(nFitIntervals), np.zeros(nFitIntervals)
 
         for i in range(nFitIntervals):
             slicer = slice(lowerValues[i], upper)
 
             # find E using correlator fit
-            fitResult = fn_correlator_fit(confs, slicer)
+            fitResult = fn_correlator_fit(confs, slicer, (0, np.inf))
             params = fitResult[:2] 
             paramsErr = fitResult[2:4] 
 
@@ -89,35 +89,28 @@ def stability_plot(confs, plotMEff = True, tSpan=5):
             label='upper bound = %i' % upper)
     
     if plotMEff:
-        maxnFitIntervals = maxUpper - lowerDistance - lowerLower
-        mEffArr, mEffErrArr = np.zeros(maxnFitIntervals), np.zeros(maxnFitIntervals)
+        #TODO: calculate meff for all tPos values in one bootstrapping
+        tPosValues = np.arange(lowerLower+tSpan+5, maxUpper-tSpan-10)
+        ntPosValues = len(tPosValues)
+        mEffArr, mEffErrArr = np.zeros(ntPosValues), np.zeros(ntPosValues)
 
-        for i in range(maxnFitIntervals):
-            tPosValues = np.arange(lowerLower, maxUpper)
+        for i in range(ntPosValues):
             # find E using cosh formula ("effective mass")
             result, resultErr, _, _ = bootstrap_function(fn_meff, confs, 0, (tPosValues[i], tSpan), nSamples)
 
             mEffArr[i] = result
             mEffErrArr[i] = resultErr
     
-            ax.errorbar(
-                tPosValues, mEffArr, mEffErrArr,
-                fmt='x', capsize=capsize, color='tab:blue', zorder=5,
-                label=r'effective mass using $\tau=%i$' % tSpan
-            )
+        ax.errorbar(
+            tPosValues, mEffArr, mEffErrArr,
+            fmt='x', capsize=capsize, color='tab:blue', zorder=5,
+            label=r'effective mass using $\tau=%i$' % tSpan
+        )
 
 
-    #order = [0]
-    #if plotMEff:
-    #    order = [0, 1]
-    #    # add effective mass to plot
-    #    ax.errorbar(lowerValues, mEffArr, mEffErrArr, fmt='x', capsize=capsize, color = 'tab:blue', label=r'effective mass using $\tau=%i$' % tSpan, zorder=5)
-    
-    #handles, labels = plt.gca().get_legend_handles_labels()
-    #ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='lower left')
     ax.legend()
     ax.set_title('Stability Plot')
-    ax.set_xlabel('lower boundary of fit / t')
+    ax.set_xlabel('lower boundary of fit | t')
     ax.set_ylabel('resulting $E_o$')
     ax.grid()
     fig.savefig('plot/stability.pdf', **figArgs)
@@ -125,7 +118,7 @@ def stability_plot(confs, plotMEff = True, tSpan=5):
 
 doBinErrorPlot = False
 doStabilityPlot = True
-plotMEff = False
+plotMEff = True
 initialGuess = (0.01, 0.01)
 nStraps = 1000
 nSamples = nStraps
@@ -176,6 +169,7 @@ print('-- plot')
 #sliceA, sliceB = 16, 64
 #sliceA, sliceB = 0, 48
 sliceA, sliceB = 30, 50
+sliceA, sliceB = 42, 80
 slicer = slice(sliceA, sliceB)
 
 fig, ax = plt.subplots()

@@ -1,7 +1,8 @@
 all: paper build
 
-build: plot/correlator.pdf
+build: src/main.py
 	python src/main.py
+	touch build
 
 paper: build latex/main.tex
 	cp -t latex plot/*.pdf
