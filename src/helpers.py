@@ -302,5 +302,5 @@ def bootstrap_function(function, data, axis, args, nSamples):
     resultErr = np.std(resultArr, 0, ddof=1)
     resultBootMean = np.mean(resultArr, 0)
 
-    return result, resultErr, resultBootMean
+    return result, resultErr, resultBootMean, resultArr
 
