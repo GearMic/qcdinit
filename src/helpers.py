@@ -293,13 +293,14 @@ def bootstrap_function(function, data, axis, args, nSamples):
 
     dataLen = data.shape[axis]
     for i in range(nSamples):
-        rng = np.random.default_rng()
-        sampleIndex = rng.choice(dataLen, dataLen, replace=True)
+        #rng = np.random.default_rng()
+        #sampleIndex = rng.choice(dataLen, dataLen, replace=True)
+        sampleIndex = np.random.choice(dataLen, dataLen, replace=True)
         dataSample = data[sampleIndex]
         resultArr[i] = function(dataSample, *args)
     
     resultErr = np.std(resultArr, 0, ddof=1)
     resultBootMean = np.mean(resultArr, 0)
 
-    return result, resultErr, resultBootMean, resultArr
+    return result, resultErr, resultBootMean
 
